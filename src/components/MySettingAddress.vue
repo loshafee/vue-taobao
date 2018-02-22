@@ -7,37 +7,16 @@
 
     <div class="saved-address-list" v-if="!selectFlag">
       <ul class="address-list">
-        <li>
+        <li v-for="(address, index) in addressLists"
+          :key="index"
+          :class="address.default_address ? 'default-list':''"
+          @click="editAddress(index)">
           <div class="user-info">
-            <span>收货人：小米</span>
-            <span>13800138000</span>
+            <span>收货人：{{address.consignee}}</span>
+            <span>{{address.phone}}</span>
           </div>
           <p>
-            收货地址：广东省广州市天河区长兴街道岑村
-          </p>
-          <span class="icon-default">
-            <i class="icon iconfont icon-check"></i>
-          </span>
-        </li>
-        <li class="default-list">
-          <div class="user-info">
-            <span>收货人：小米</span>
-            <span>13800138000</span>
-          </div>
-          <p>
-            收货地址：广东省广州市天河区长兴街道岑村广东省广州市天河区长兴街道岑村广东省广州市天河区长兴街道岑村
-          </p>
-          <span class="icon-default">
-            <i class="icon iconfont icon-check"></i>
-          </span>
-        </li>
-        <li>
-          <div class="user-info">
-            <span>收货人：小米</span>
-            <span>13800138000</span>
-          </div>
-          <p>
-            收货地址：广东省广州市天河区长兴街道岑村
+            收货地址：{{address.simplearea}} {{address.street}} {{address.address}}
           </p>
           <span class="icon-default">
             <i class="icon iconfont icon-check"></i>
@@ -71,26 +50,29 @@
           <span> {{ getAreaLiteral }} </span>
         </li>
         <li>
-          <select name="" id="">
+          <select name="street" id="street" v-model="street">
             <option value="0">请选择街道</option>
-            <option :value="street.id" v-for="(street, index) in areaStreet" :key="index">
+            <option :value="street.fullname" v-for="(street, index) in areaStreet" :key="index">
               {{ street.fullname }}
             </option>
           </select>
         </li>
         <li>
-          <input type="text" placeholder="请输入详细地址">
+          <input type="text" v-model="detailsAddress" placeholder="请输入详细地址">
         </li>
         <li>
-          <input type="text" placeholder="请输入收货人姓名">
+          <input type="text" v-model="consignee" placeholder="请输入收货人姓名">
         </li>
         <li>
-          <input type="text" placeholder="请输入收货人联系电话">
+          <input type="text" v-model="consigneePhone" placeholder="请输入收货人联系电话">
         </li>
         <li>
           <input type="text" v-model="zipCode" placeholder="请输入邮编">
         </li>
       </ul>
+      <a class="add-btn" @click="onAddressSave">
+        保存地址
+      </a>
     </div>
   </div>
 </template>
@@ -104,13 +86,17 @@ export default {
       selectFlag: false,
       selectedProvince: '',
       selectedCity: '',
-      selectedCount: '',
       areaIndex: 0,
       currentList: [],
       areaList: [],
       address: [],
       areaStreet: [],
-      zipCode: ''
+      zipCode: '',
+      street: 0,
+      detailsAddress: '',
+      consignee: '',
+      consigneePhone: '',
+      addressLists: []
     }
   },
   computed: {
@@ -122,6 +108,8 @@ export default {
     }
   },
   mounted () {
+    window.v = this
+    this.getAddressList()
   },
   methods: {
     onAddaddress () {
@@ -179,6 +167,68 @@ export default {
       this.areaIndex++
       this.currentList = this.areaList[this.areaIndex].slice(cidx[0], cidx[1])
       this.address.push(province)
+    },
+    getAddressList () {
+      this.$axios.get('/getAddressList')
+          .then((res) => {
+            this.addressLists = res.data.addressLists
+          })
+    },
+    editAddress (index) {
+      // this.selectFlag = true
+      // this.showPanelable = true
+      // this.address = JSON.parse(this.addressLists[index].area)
+    },
+    onAddressSave () {
+      let address = this.detailsAddress.trim()
+      let consignee = this.consignee.trim()
+      let phone = this.consigneePhone.trim()
+      let zipCode = this.zipCode
+      if (address === '') {
+        this.$layer.open({
+          content: '请输入收货人地址'
+        })
+        return
+      }
+      if (address.length < 5 || address.length > 60) {
+        this.$layer.open({
+          content: '收货人地址最少5个字，最多60个字'
+        })
+        return
+      }
+      if (consignee === '') {
+        this.$layer.open({
+          content: '请输入收货人名称'
+        })
+        return
+      }
+      if (!/1\d{10}/.test(phone)) {
+        this.$layer.open({
+          content: '请输入11位的手机号码'
+        })
+        return
+      }
+
+      this.$axios.post('/addAddress', {
+        userId: 2,
+        consignee: consignee,
+        phone: phone,
+        address: address,
+        street: this.street,
+        area: JSON.stringify(this.address),
+        simpleArea: this.getAreaLiteral,
+        zipcode: zipCode
+      }).then((res) => {
+        this.$layer.open({
+          content: res.data.message,
+          time: 3
+        })
+        this.selectFlag = false
+        this.showPanelable = false
+        this.getAddressList()
+      }).catch((err) => {
+        console.log(err)
+      })
     }
   }
 }
