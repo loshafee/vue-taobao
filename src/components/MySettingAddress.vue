@@ -186,7 +186,9 @@ export default {
     getAddressList () {
       this.$axios.get('/getAddressList')
           .then((res) => {
-            this.addressLists = res.data.addressLists
+            this.addressLists = res.data.addressLists.sort((a, b) => {
+              return b.default_address - a.default_address
+            })
           })
     },
     onAddressUpdate (index) {
@@ -285,7 +287,7 @@ export default {
         })
         this.selectFlag = false
         this.showPanelable = false
-        this.getAddressList()        
+        this.getAddressList()
       })
     }
   }
