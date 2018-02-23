@@ -114,6 +114,9 @@ export default {
     }
   },
   computed: {
+    /** 
+     * 省市区拼接
+     */
     getAreaLiteral () {
       return this.address.reduce((result, ads) => {
         result += ads.fullname
@@ -130,6 +133,9 @@ export default {
       this.selectFlag = true
       this.getProvince()
     },
+    /** 
+     * 获取省份信息
+     */
     getProvince () {
       this.$jsonp('http://apis.map.qq.com/ws/district/v1/list', {
         key: 'BOBBZ-XL36U-AV3VJ-4A2KV-SUGUS-LAB5Z',
@@ -140,6 +146,9 @@ export default {
         this.currentList = this.areaList[0]
       })
     },
+    /** 
+     * 获取街道信息以及邮编
+     */
     getStreet (province) {
       this.$jsonp('http://apis.map.qq.com/ws/district/v1/getchildren', {
         id: province.id,
@@ -161,15 +170,24 @@ export default {
         })
       })
     },
+    /** 
+     * 选择省份
+     */
     onSelectedProvince () {
       this.currentList = this.areaList[this.areaIndex = 0]
       this.address.splice(this.areaIndex)
     },
+    /** 
+     * 选择市
+     */
     onSelectedCity () {
       let cidx = this.address[0].cidx.slice()
       this.currentList = this.areaList[this.areaIndex = 1].slice(cidx[0], cidx[1])
       this.address.splice(this.areaIndex)
     },
+    /** 
+     * 选择区
+     */
     onSelectedArea (province) {
       this.street = 0
       let cidx = province.cidx
@@ -183,6 +201,9 @@ export default {
       this.currentList = this.areaList[this.areaIndex].slice(cidx[0], cidx[1])
       this.address.push(province)
     },
+    /** 
+     * 获取已保存的收货地址，并排序
+     */
     getAddressList () {
       this.$axios.get('/getAddressList')
           .then((res) => {
@@ -191,6 +212,9 @@ export default {
             })
           })
     },
+    /** 
+     * 更新收货地址
+     */
     onAddressUpdate (index) {
       let addressInfo = this.addressLists[index]
       this.addressInfo = addressInfo
@@ -223,6 +247,9 @@ export default {
         })
       })
     },
+    /**
+     * 新增收货地址
+     */
     onAddressSave (actionType) {
       let address = this.detailsAddress.trim()
       let consignee = this.consignee.trim()
@@ -277,6 +304,9 @@ export default {
         console.log(err)
       })
     },
+    /**
+     * 删除收货地址
+     */
     onAddressDel () {
       this.$axios.post('/delAddress', {
         id: this.addressInfo.id
