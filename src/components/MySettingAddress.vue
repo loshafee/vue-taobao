@@ -209,7 +209,7 @@ export default {
         output: 'jsonp',
         jsonpCallback: 'callback'
       }).then((res) => {
-        let cidx = this.address[1].cidx
+        let cidx = this.address[this.address.length - 2].cidx
         this.areaList = res.result
         this.areaIndex = this.address.length - 1
         this.currentList = this.areaList[this.areaIndex].slice(cidx[0], cidx[1])
