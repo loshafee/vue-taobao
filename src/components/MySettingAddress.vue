@@ -10,7 +10,7 @@
         <li v-for="(address, index) in addressLists"
           :key="index"
           :class="address.default_address ? 'default-list':''"
-          @click="editAddress(index)">
+          @click="onAddressUpdate(index)">
           <div class="user-info">
             <span>收货人：{{address.consignee}}</span>
             <span>{{address.phone}}</span>
@@ -51,7 +51,7 @@
         </li>
         <li>
           <select name="street" id="street" v-model="street">
-            <option value="0">请选择街道</option>
+            <option value="0" selected>请选择街道</option>
             <option :value="street.fullname" v-for="(street, index) in areaStreet" :key="index">
               {{ street.fullname }}
             </option>
@@ -69,8 +69,21 @@
         <li>
           <input type="text" v-model="zipCode" placeholder="请输入邮编">
         </li>
+        
       </ul>
-      <a class="add-btn" @click="onAddressSave">
+      <div class="editbox" v-if="editFlag">
+        <p>
+          <label>
+            <input type="checkbox" v-model="default_address">
+            <span>设置为默认收货地址</span>
+          </label>
+        </p>
+        <p class="delete-btn" @click="onAddressDel">删除收货地址</p>
+        <a class="add-btn" @click="onAddressSave('update')">
+          保存地址
+        </a>
+      </div>
+      <a class="add-btn" @click="onAddressSave('save')" v-else>
         保存地址
       </a>
     </div>
@@ -84,8 +97,8 @@ export default {
     return {
       showPanelable: false,
       selectFlag: false,
-      selectedProvince: '',
-      selectedCity: '',
+      editFlag: false,
+      addressInfo: '',
       areaIndex: 0,
       currentList: [],
       areaList: [],
@@ -96,7 +109,8 @@ export default {
       detailsAddress: '',
       consignee: '',
       consigneePhone: '',
-      addressLists: []
+      addressLists: [],
+      default_address: ''
     }
   },
   computed: {
@@ -157,6 +171,7 @@ export default {
       this.address.splice(this.areaIndex)
     },
     onSelectedArea (province) {
+      this.street = 0
       let cidx = province.cidx
       if (!cidx) {
         this.showPanelable = true
@@ -174,12 +189,39 @@ export default {
             this.addressLists = res.data.addressLists
           })
     },
-    editAddress (index) {
-      // this.selectFlag = true
-      // this.showPanelable = true
-      // this.address = JSON.parse(this.addressLists[index].area)
+    onAddressUpdate (index) {
+      let addressInfo = this.addressLists[index]
+      this.addressInfo = addressInfo
+      this.street = addressInfo.street
+      this.detailsAddress = addressInfo.address
+      this.consignee = addressInfo.consignee
+      this.consigneePhone = addressInfo.phone
+      this.zipCode = addressInfo.zipcode
+      this.editFlag = true
+      this.selectFlag = true
+      this.showPanelable = true
+      this.default_address = addressInfo.default_address
+      this.address = JSON.parse(this.addressLists[index].area)
+      this.$jsonp('http://apis.map.qq.com/ws/district/v1/list', {
+        key: 'BOBBZ-XL36U-AV3VJ-4A2KV-SUGUS-LAB5Z',
+        output: 'jsonp',
+        jsonpCallback: 'callback'
+      }).then((res) => {
+        let cidx = this.address[1].cidx
+        this.areaList = res.result
+        this.areaIndex = this.address.length - 1
+        this.currentList = this.areaList[this.areaIndex].slice(cidx[0], cidx[1])
+        this.$jsonp('http://apis.map.qq.com/ws/district/v1/getchildren', {
+          id: this.address[this.areaIndex].id,
+          key: 'BOBBZ-XL36U-AV3VJ-4A2KV-SUGUS-LAB5Z',
+          output: 'jsonp',
+          jsonpCallback: 'callback'
+        }).then((res) => {
+          this.areaStreet = res.result[0]
+        })
+      })
     },
-    onAddressSave () {
+    onAddressSave (actionType) {
       let address = this.detailsAddress.trim()
       let consignee = this.consignee.trim()
       let phone = this.consigneePhone.trim()
@@ -210,6 +252,7 @@ export default {
       }
 
       this.$axios.post('/addAddress', {
+        id: this.addressInfo.id,
         userId: 2,
         consignee: consignee,
         phone: phone,
@@ -217,7 +260,9 @@ export default {
         street: this.street,
         area: JSON.stringify(this.address),
         simpleArea: this.getAreaLiteral,
-        zipcode: zipCode
+        zipcode: zipCode,
+        default_address: this.default_address,
+        actionType: actionType
       }).then((res) => {
         this.$layer.open({
           content: res.data.message,
@@ -228,6 +273,19 @@ export default {
         this.getAddressList()
       }).catch((err) => {
         console.log(err)
+      })
+    },
+    onAddressDel () {
+      this.$axios.post('/delAddress', {
+        id: this.addressInfo.id
+      }).then((res) => {
+        this.$layer.open({
+          content: res.data.message,
+          time: 3
+        })
+        this.selectFlag = false
+        this.showPanelable = false
+        this.getAddressList()        
       })
     }
   }
@@ -354,20 +412,31 @@ export default {
         margin-top: -5px;
         right: 4%;
       }
+      input, select {
+        font-size: 1.6rem;      
+        display: block;
+        box-sizing: border-box;
+        width: 100%;
+        padding: 13px 3%;
+        background-color: transparent;
+        outline: none;
+        border: none;
+      }
     }
-    input, select {
-      font-size: 1.6rem;      
-      display: block;
-      box-sizing: border-box;
-      width: 100%;
-      padding: 13px 3%;
-      background-color: transparent;
-      -webkit-appearance: none;
-      outline: none;
-      border: none;
-    }
+    
     select {
-      padding: 12px 3%;      
+      padding: 12px 3%;
+      -webkit-appearance: none;  
+    }
+    .editbox {
+      p {
+        padding: 0 3%;
+        line-height: 44px;
+        border-bottom: 1px solid #eee;
+        &.delete-btn {
+          color: red;
+        }
+      }
     }
   }
 </style>
