@@ -1,6 +1,6 @@
 # vue-taobao
 
-> vue2 仿写移动端淘宝
+> Vue2.js 仿写移动端淘宝
 
 ## Build Setup
 
